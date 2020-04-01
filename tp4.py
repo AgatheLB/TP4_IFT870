@@ -11,6 +11,9 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 
 from sklearn.decomposition import PCA
+from sklearn.cluster import KMeans
+from sklearn import metrics
+from scipy.spatial.distance import cdist
 
 # %%
 #Chargement d'un ensemble de données de faces de personnages connus
@@ -77,5 +80,25 @@ filtered_data = filtered_data.T
 
 # %%
 
-
 pca = PCA(n_components=100, whiten=True, random_state=0)
+reduced_data = pca.fit_transform(filtered_data)
+
+# %%
+"""
+# 3. Analyse avec K-Means
+## a. méthode Elbow
+"""
+
+# %%
+mean_distances = []
+for k in range(40, 85, 5):
+    model = KMeans(n_clusters=k)
+    model.fit(reduced_data)
+    dist_to_best_centroid = np.min(cdist(reduced_data, model.cluster_centers_, 'euclidean'), axis=1)
+    mean_distances.append(sum(dist_to_best_centroid) / reduced_data.shape[0])
+
+plt.plot(range(40, 85, 5), mean_distances, 'bx-')
+plt.xlabel('k')
+plt.ylabel('Mean distance')
+plt.title('Elbow Method with K-Means model')
+plt.show()
