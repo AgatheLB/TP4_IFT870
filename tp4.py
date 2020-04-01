@@ -10,11 +10,12 @@ import seaborn as sns
 
 from sklearn.decomposition import PCA
 from sklearn.cluster import KMeans
-from sklearn import metrics
 from scipy.spatial.distance import cdist
 from sklearn.model_selection import cross_validate
-from sklearn.metrics import make_scorer
+from sklearn.metrics import make_scorer, silhouette_score
 from sklearn.metrics.cluster import adjusted_rand_score
+from sklearn.cluster import DBSCAN
+from itertools import product
 
 # %%
 #Chargement d'un ensemble de données de faces de personnages connus
@@ -23,7 +24,7 @@ from sklearn.datasets import fetch_lfw_people
 # %%
 import os, ssl
 if (not os.environ.get('PYTHONHTTPSVERIFY', '') and
-    getattr(ssl, '_create_unverified_context', None)): 
+    getattr(ssl, '_create_unverified_context', None)):
     ssl._create_default_https_context = ssl._create_unverified_context
 
 # %%
@@ -67,7 +68,7 @@ filtered_target = []
 for i, (tn, nb) in enumerate(zip(faces.target_names, number_target_per_face)):
     # retrieve first forty indexes of target associated
     positions = np.where(faces.target == i)[0][:40]
-    
+
     filtered_faces[tn] = []
     for p in positions:
         filtered_faces[tn].append(faces.images[p])
@@ -127,3 +128,31 @@ plt.xlabel('k')
 plt.ylabel('Mean score')
 plt.title('Cross validation with K-Means model')
 plt.show()
+
+# %%
+"""
+# 4. Analyse avec DBSCAN
+## a. Utilisation du coefficient de silhouette
+"""
+
+# %%
+
+pairwise_dist = cdist(reduced_data, reduced_data, 'euclidean')
+silh_scores = np.zeros(110)
+best_params = {}
+for i, (e, s) in enumerate(product(range(5, 16), range(1, 11))):
+    pred = DBSCAN(eps=e, min_samples=s).fit_predict(reduced_data)
+    if len(np.unique(pred)) != 1:
+        silh_scores[i] = silhouette_score(pairwise_dist, pred)
+
+        if np.max(silh_scores) == silh_scores[i]:
+            best_params['eps'] = e
+            best_params['min_sample'] = s
+
+print(f'Les paramètres présentant les meilleurs silhouette score sont: eps {best_params.get("eps")} et min_sample '
+      f'{best_params.get("min_sample")}')
+
+# %%
+"""
+## b. 
+"""
