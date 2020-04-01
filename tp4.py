@@ -10,6 +10,8 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import seaborn as sns
 
+from sklearn.decomposition import PCA
+
 # %%
 #Chargement d'un ensemble de données de faces de personnages connus
 from sklearn.datasets import fetch_lfw_people
@@ -50,15 +52,23 @@ for nom, image, ax in zip(faces.target, faces.images, axes.ravel()):
 """
 
 # %%
-reduced_faces = dict()
+
+data = pd.DataFrame(faces.data)
+
+# %%
+
+filtered_faces = dict()
+filtered_data = pd.DataFrame()
 for i, (tn, nb) in enumerate(zip(faces.target_names, number_target_per_face)):
-    # if nb > 40:
     # retrieve first forty indexes of target associated
     positions = np.where(faces.target == i)[0][:40]
 
-    reduced_faces[tn] = []
+    filtered_faces[tn] = []
     for p in positions:
-        reduced_faces[tn].append(faces.images[p])
+        filtered_faces[tn].append(faces.images[p])
+        filtered_data.loc[:, p] = data.iloc[p]
+
+filtered_data = filtered_data.T
 
 # %%
 """
@@ -66,3 +76,6 @@ for i, (tn, nb) in enumerate(zip(faces.target_names, number_target_per_face)):
 """
 
 # %%
+
+
+pca = PCA(n_components=100, whiten=True, random_state=0)
