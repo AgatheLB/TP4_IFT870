@@ -18,25 +18,26 @@ from sklearn.cluster import DBSCAN
 from itertools import product
 
 # %%
-#Chargement d'un ensemble de données de faces de personnages connus
+# Chargement d'un ensemble de données de faces de personnages connus
 from sklearn.datasets import fetch_lfw_people
 
 # %%
 import os, ssl
+
 if (not os.environ.get('PYTHONHTTPSVERIFY', '') and
-    getattr(ssl, '_create_unverified_context', None)):
+        getattr(ssl, '_create_unverified_context', None)):
     ssl._create_default_https_context = ssl._create_unverified_context
 
 # %%
 faces = fetch_lfw_people(min_faces_per_person=20, resize=0.7)
 
 # %%
-#format des images et nombres de clusters
+# format des images et nombres de clusters
 print("Format des images: {}".format(faces.images.shape))
 print("Nombre de classes: {}".format(len(faces.target_names)))
 
 # %%
-#nombre de données par cluster
+# nombre de données par cluster
 number_target_per_face = np.bincount(faces.target)
 for i, (nb, nom) in enumerate(zip(number_target_per_face, faces.target_names)):
     print("{0:25} {1:3}".format(nom, nb), end='   ')
@@ -44,7 +45,7 @@ for i, (nb, nom) in enumerate(zip(number_target_per_face, faces.target_names)):
         print()
 
 # %%
-#Affichage des 10 premières faces
+# Affichage des 10 premières faces
 fig, axes = plt.subplots(2, 5, figsize=(10, 6), subplot_kw={'xticks': (), 'yticks': ()})
 for nom, image, ax in zip(faces.target, faces.images, axes.ravel()):
     ax.imshow(image)
@@ -74,7 +75,6 @@ for i, (tn, nb) in enumerate(zip(faces.target_names, number_target_per_face)):
 
         filtered_data.loc[:, p] = data.iloc[p]
         filtered_target.append(faces.target[p])
-
 
 filtered_data = filtered_data.T
 
@@ -168,8 +168,23 @@ min_samples = 3
 for eps in range(5, 16):
     model = DBSCAN(eps=eps, min_samples=min_samples, n_jobs=-1)
     pred = model.fit_predict(reduced_data, filtered_target)
-    print(len(np.unique(model.labels_)))
-    for label in np.unique(model.labels_):
+    labels = np.unique(model.labels_)
+    for label in labels[labels != -1]:  # cluster -1 (noise) not considered
         positions = np.where(pred == label)
-        for p in positions:
-            faces.images[p]
+        cpt, clusters_images, clusters_names = 0, [], []
+        for p in positions[0]:
+            if cpt >= 4:
+                break
+            clusters_images.append(faces.images[p])
+            clusters_names.append(faces.target_names[faces.target[p]])
+            cpt += 1
+
+        fig, axs = plt.subplots(nrows=1, ncols=len(clusters_images))
+        for img, name, ax in zip(clusters_images, clusters_names, axs):
+            ax.imshow(img)
+            ax.axis('off')
+            ax.set_title(name)
+        fig.suptitle(f'Eps étudié {eps}')
+        plt.show()
+
+# %%
