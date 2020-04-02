@@ -10,7 +10,7 @@ import seaborn as sns
 
 from sklearn.decomposition import PCA
 from sklearn.cluster import KMeans
-from scipy.spatial.distance import cdist
+from scipy.spatial.distance import cdist, pdist, squareform
 from sklearn.model_selection import cross_validate
 from sklearn.metrics import make_scorer, silhouette_score
 from sklearn.metrics.cluster import adjusted_rand_score
@@ -45,8 +45,7 @@ for i, (nb, nom) in enumerate(zip(number_target_per_face, faces.target_names)):
 
 # %%
 #Affichage des 10 premières faces
-fig, axes = plt.subplots(2, 5, figsize=(10, 6),
-                         subplot_kw={'xticks': (), 'yticks': ()})
+fig, axes = plt.subplots(2, 5, figsize=(10, 6), subplot_kw={'xticks': (), 'yticks': ()})
 for nom, image, ax in zip(faces.target, faces.images, axes.ravel()):
     ax.imshow(image)
     ax.set_title(faces.target_names[nom])
@@ -72,6 +71,7 @@ for i, (tn, nb) in enumerate(zip(faces.target_names, number_target_per_face)):
     filtered_faces[tn] = []
     for p in positions:
         filtered_faces[tn].append(faces.images[p])
+
         filtered_data.loc[:, p] = data.iloc[p]
         filtered_target.append(faces.target[p])
 
@@ -86,7 +86,7 @@ filtered_data = filtered_data.T
 # %%
 
 pca = PCA(n_components=100, whiten=True, random_state=0)
-reduced_data = pca.fit_transform(filtered_data)
+reduced_data = pd.DataFrame(pca.fit_transform(filtered_data), index=filtered_data.index)
 
 # %%
 """
@@ -137,22 +137,39 @@ plt.show()
 
 # %%
 
-pairwise_dist = cdist(reduced_data, reduced_data, 'euclidean')
-silh_scores = np.zeros(110)
-best_params = {}
-for i, (e, s) in enumerate(product(range(5, 16), range(1, 11))):
-    pred = DBSCAN(eps=e, min_samples=s).fit_predict(reduced_data)
-    if len(np.unique(pred)) != 1:
-        silh_scores[i] = silhouette_score(pairwise_dist, pred)
+pairwise_dist = squareform(pdist(reduced_data, 'euclidean'))
+best_params = {'score': 0}
+for i, (ep, min_sample) in enumerate(product(range(5, 16), range(1, 11))):
+    model = DBSCAN(eps=ep, min_samples=min_sample, n_jobs=-1)
+    pred = model.fit_predict(reduced_data, filtered_target)
 
-        if np.max(silh_scores) == silh_scores[i]:
-            best_params['eps'] = e
-            best_params['min_sample'] = s
+    if len(np.unique(pred)) != 1:
+        score = silhouette_score(pairwise_dist, pred)
+
+        if score > best_params.get('score'):
+            best_params['eps'] = ep
+            best_params['min_sample'] = min_sample
+            best_params['score'] = score
+            best_params['model'] = model
 
 print(f'Les paramètres présentant les meilleurs silhouette score sont: eps {best_params.get("eps")} et min_sample '
       f'{best_params.get("min_sample")}')
+print(f'Le nombre de clusters trouvé est de {len(np.unique(model.labels_)) - 1}')
 
 # %%
 """
-## b. 
+## b. Visualisation
 """
+
+# %%
+
+min_samples = 3
+
+for eps in range(5, 16):
+    model = DBSCAN(eps=eps, min_samples=min_samples, n_jobs=-1)
+    pred = model.fit_predict(reduced_data, filtered_target)
+    print(len(np.unique(model.labels_)))
+    for label in np.unique(model.labels_):
+        positions = np.where(pred == label)
+        for p in positions:
+            faces.images[p]
