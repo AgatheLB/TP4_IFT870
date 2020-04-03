@@ -1,6 +1,8 @@
 # %%
 # leba3207
 
+import os, ssl
+
 import sklearn
 import numpy as np
 import scipy as sp
@@ -23,8 +25,7 @@ from itertools import product
 from sklearn.datasets import fetch_lfw_people
 
 # %%
-import os, ssl
-
+# fix unverified MacOs ssl certificates
 if (not os.environ.get('PYTHONHTTPSVERIFY', '') and
         getattr(ssl, '_create_unverified_context', None)):
     ssl._create_default_https_context = ssl._create_unverified_context
@@ -79,9 +80,8 @@ filtered_target = filtered_target.sort_index(axis=0)
 
 # %%
 """
-On récupère les 40 premières images (faces.data) pour chaque personne dans filtered_data. 
-On fait de même pour les images formattées contenues dans faces.images que l'on insère dans le dictionnaire 
-filtered_faces avec le nom de chaque personne associée.
+On récupère les 40 premières images (faces.data) pour chaque personne dans filtered_data ainsi que les cibles 
+associées de la même manière (faces.target).
 """
 
 # %%
@@ -157,7 +157,6 @@ Cependant, ce score (0.03) se révèle être quand même bas, ce qui démontre p
 On dénote aussi que, lorsque le random_state n'est pas fixe, alors les résultats de la validation croisée se révèlent 
 être très différents les uns des autres. On peut donc facilement imaginer que le modèle est peu robuste, et se demander
 si K-means est vraiment pertinent pour nos données.
-
 """
 
 # %%
@@ -205,7 +204,10 @@ print(f'Le nombre de clusters trouvé est de {len(np.unique(model.labels_)) - 1}
 Le coefficient de silhouette permet de mesurer la qualité de partition des clusters établis. 
 On note que celui-ci devient de plus en plus élevé pour des eps et min_samples de plus en plus grands. 
 On peut déduire que plus les eps et min_samples sont élevés, plus les clusters présentent une meilleure cohésion 
-intra-cluster et séparation inter-cluster.
+intra-cluster et séparation inter-cluster. 
+
+D'un autre côté, lorsque le coefficient de silhouette est élevé, on remarque que c'est quand le nombre de clusters 
+(cluster bruit omis) est de 1. Toutes les images sont donc regroupées dans le même cluster.
 """
 
 # %%
